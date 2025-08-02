@@ -60,8 +60,10 @@ local function entry(_, job)
             :output()
     
     if output.status.success then
-            local source, usage = output.stdout:match(".*%s(%S+)%s+(%S+)")
-            set_state(usage, source)
+        local source, usage = output.stdout:match(".*%s(%S+)%s+(%S+)")
+        set_state(usage, source)
+    else
+        set_state("", "")
     end
 end
 
