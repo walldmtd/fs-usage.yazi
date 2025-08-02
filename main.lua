@@ -5,7 +5,9 @@ local set_state = ya.sync(function(st, usage, source)
     st.usage = usage
     st.source = source
 
-    ya.render()
+    -- Todo: Remove when ya.render is deprecated
+    local render = ui.render or ya.render
+    render()
 end)
 
 -- Called from init.lua 
