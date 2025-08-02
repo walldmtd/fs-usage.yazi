@@ -39,9 +39,9 @@ local function setup(st, opts)
     Header:children_add(function(self)
         return ui.Line {
             " ",
-            ui.Span(st.source),
+            ui.Span(st.source or ""),
             ": ",
-            ui.Span(st.usage),
+            ui.Span(st.usage or ""),
             " "
         }
     end, 1000, Header.RIGHT)
