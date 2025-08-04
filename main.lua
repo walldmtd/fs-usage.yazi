@@ -1,5 +1,10 @@
 --- @since 25.5.31
 
+-- Default options
+-- Can't reference Header.RIGHT etc. here (it hangs) so align is a string
+-- 2000 puts it to the right of the indicator, and leaves some room between
+local OPTION_POSITION = { parent = Header, align = "RIGHT", order = 2000 }
+
 ---Set new plugin state and redraw
 local set_state = ya.sync(function(st, usage, source)
     st.usage = usage
@@ -14,6 +19,21 @@ end)
 ---@param st State
 ---@param opts Options
 local function setup(st, opts)
+    -- Set default options first
+    local position = OPTION_POSITION
+
+    -- Set user options
+    if opts then
+        if opts.position then
+            position.parent = opts.position.parent or position.parent
+            position.order = opts.position.order or position.order
+
+            if opts.position.align == "LEFT" or opts.position.align == "RIGHT" then
+                position.align = opts.position.align
+            end
+        end
+    end
+
     ---Callback on cwd change to pass the new path to the plugin entry
     local function callback()
         local cwd = cx.active.current.cwd
@@ -36,7 +56,7 @@ local function setup(st, opts)
     --  (also file writing/copying doesn't have an event anyway so it would still get out of date)
 
     -- Add the entry to the header
-    Header:children_add(function(self)
+    position.parent:children_add(function(self)
         return ui.Line {
             " ",
             ui.Span(st.source or ""),
@@ -44,7 +64,7 @@ local function setup(st, opts)
             ui.Span(st.usage or ""),
             " "
         }
-    end, 1000, Header.RIGHT)
+    end, position.order, position.parent[position.align])
 end
 
 

@@ -17,12 +17,31 @@ ya pkg add walldmtd/fs-usage
 
 ## Usage
 
-Add this somewhere in `~/.config/yazi/init.lua`, and adjust options as needed:
+To use the default setup, add this somewhere in `~/.config/yazi/init.lua`:
+
+```lua
+require("fs-usage"):setup()
+```
+
+To customize it, add this instead and adjust the options as needed:
 
 ```lua
 require("fs-usage"):setup({
     -- All values are optional
-    -- WIP
+
+    -- Position of the component
+    --  parent
+    --      Parent component
+    --      One of: Header | Status
+    --      Default: Header
+    --  align
+    --      Anchor point within parent object
+    --      One of: "LEFT" | "RIGHT"
+    --      Default: "RIGHT"
+    --  order
+    --      Component order relative to others in the same parent
+    --      Default: 2000
+    position = { parent = Header, align = "RIGHT", order = 2000 },
 })
 ```
 
@@ -35,4 +54,4 @@ require("fs-usage"):setup({
 - [ ] Colour + option to disable
 - [ ] Options for colour thresholds
 - [ ] Option to remove partition name or percentage
-- [ ] Option to change module location (header/footer), and set position in order
+- [x] Option to change module location (header/footer), and set position in order
