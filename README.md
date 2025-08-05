@@ -42,6 +42,10 @@ require("fs-usage"):setup({
     --      Component order relative to others in the same parent
     --      Default: 2000
     position = { parent = Header, align = "RIGHT", order = 2000 },
+
+    -- Option to enable or disable the usage bar
+    -- Default: true
+    bar = true
 })
 ```
 
@@ -50,7 +54,7 @@ require("fs-usage"):setup({
 
 ## Todo
 
-- [ ] Usage bar + option to disable
+- [x] Usage bar + option to disable
 - [ ] Colour + option to disable
 - [ ] Options for colour thresholds
 - [ ] Option to remove partition name or percentage
