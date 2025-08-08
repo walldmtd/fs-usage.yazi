@@ -1,31 +1,43 @@
 --- @since 25.5.31
 
--- Default options
--- Can't reference Header.RIGHT etc. here (it hangs) so align is a string
--- 2000 puts it to the right of the indicator, and leaves some room between
-local OPTION_POSITION = { parent = Header, align = "RIGHT", order = 2000 }
-local OPTION_BAR = true
-local OPTION_STYLE_LABEL = {} -- No bold here cause the bold in the Yazi default doesn't show
-local OPTION_STYLE_NORMAL = { fg = "blue", bg = "black" }
-local OPTION_STYLE_WARNING = { fg = "red", bg = "black" }
+local DEFAULT_OPTIONS = {
+    -- Can't reference Header.RIGHT etc. here (it hangs) so parent and align are strings
+    -- 2000 puts it to the right of the indicator, and leaves some room between
+    position = { parent = "Header", align = "RIGHT", order = 2000 },
+    bar = true,
+    style_label = th.status.progress_label,
+    style_normal = th.status.progress_normal,
+    style_warning = th.status.progress_error
+}
 
--- Merge and overwrite values from one table into another
+-- Deep copy and merge two tables, overwriting values from one table into another
 ---@param from Table to take values from
 ---@param to Table to merge into
 local function merge(into, from)
+    -- Handle nil inputs
+    into = into or {}
+    from = from or {}
+
     local result = {}
 
-    if into then
-        for k, v in pairs(into) do
+    -- Deep copy 'into' first
+    for k, v in pairs(into) do
+        if type(v) == "table" then
+            result[k] = merge({}, v)
+        else
             result[k] = v
         end
     end
 
-    if from then
-        for k, v in pairs(from) do
+    -- Merge
+    for k, v in pairs(from) do
+        if type(v) == "table" then
+            result[k] = merge(result[k], v)
+        else
             result[k] = v
         end
     end
+
     return result
 end
 
@@ -101,32 +113,23 @@ end)
 ---@param st State
 ---@param opts Options
 local function setup(st, opts)
-    -- Set default options first
-    -- Todo: move to the options function
-    local position = OPTION_POSITION
-    local bar = OPTION_BAR
-    -- Inherit from flavor if possible
-    local style_label = merge(OPTION_STYLE_LABEL, th.status.progress_label)
-    local style_normal = merge(OPTION_STYLE_NORMAL, th.status.progress_normal)
-    local style_warning = merge(OPTION_STYLE_WARNING, th.status.progress_warning)
+    opts = merge(DEFAULT_OPTIONS, opts)
 
-    -- Set user options
-    -- Todo: move this to its own function (edit opts in-place to replace nil with defaults)
-    if opts then
-        position = merge(position, opts.position)
+    -- Allow unsetting label fg with ""
+    if opts.style_label.fg == "" then opts.style_label.fg = nil end
 
-        if opts.bar ~= nil then bar = opts.bar end
-
-        style_label = merge(style_label, opts.style_label)
-        style_normal = merge(style_normal, opts.style_normal)
-        style_warning = merge(style_normal, opts.style_normal)
-
-        -- Allow unsetting label fg with ""
-        if style_label.fg == "" then style_label.fg = nil end
+    -- Translate opts.position.parent option into a component reference
+    if opts.position.parent == "Header" then
+        opts.position.parent = Header
+    elseif opts.position.parent == "Status" then
+        opts.position.parent = Status
+    else
+        -- Just set it to nil, it's gonna cause errors anyway
+        opts.position.parent = nil
     end
 
     -- Set persistent options
-    set_state_initial(bar)
+    set_state_initial(opts.bar)
 
     ---Callback on cwd change to pass the new path to the plugin entry
     local function callback()
@@ -148,10 +151,11 @@ local function setup(st, opts)
     --  but the callback is triggered before the operation completes
     --  so the usage doesn't update properly
     --  (also file writing/copying doesn't have an event anyway so it would still get out of date)
+    -- Todo: Confirm this
 
-    local style_left, style_right = build_styles(style_label, style_normal)
+    local style_left, style_right = build_styles(opts.style_label, opts.style_normal)
 
-    position.parent:children_add(function(self)
+    opts.position.parent:children_add(function(self)
         if st.usage == nil then
             -- No point showing anything if usage == nil
             return ui.Line("")
@@ -166,7 +170,7 @@ local function setup(st, opts)
                 ui.Span(st.text or ""):style(style_right)
             }
         end
-    end, position.order, position.parent[position.align])
+    end, opts.position.order, opts.position.parent[opts.position.align])
 end
 
 

@@ -32,8 +32,8 @@ require("fs-usage"):setup({
     -- Position of the component
     --  parent
     --      Parent component
-    --      One of: Header | Status
-    --      Default: Header
+    --      One of: "Header" | "Status"
+    --      Default: "Header"
     --  align
     --      Anchor point within parent object
     --      One of: "LEFT" | "RIGHT"
@@ -41,7 +41,7 @@ require("fs-usage"):setup({
     --  order
     --      Component order relative to others in the same parent
     --      Default: 2000
-    position = { parent = Header, align = "RIGHT", order = 2000 },
+    position = { parent = "Header", align = "RIGHT", order = 2000 },
 
     -- Option to enable or disable the usage bar
     -- Default: true
