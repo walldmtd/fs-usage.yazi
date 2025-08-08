@@ -5,6 +5,49 @@
 -- 2000 puts it to the right of the indicator, and leaves some room between
 local OPTION_POSITION = { parent = Header, align = "RIGHT", order = 2000 }
 local OPTION_BAR = true
+local OPTION_STYLE_LABEL = {} -- No bold here cause the bold in the Yazi default doesn't show
+local OPTION_STYLE_NORMAL = { fg = "blue", bg = "black" }
+local OPTION_STYLE_WARNING = { fg = "red", bg = "black" }
+
+-- Merge and overwrite values from one table into another
+---@param from Table to take values from
+---@param to Table to merge into
+local function merge(into, from)
+    local result = {}
+
+    if into then
+        for k, v in pairs(into) do
+            result[k] = v
+        end
+    end
+
+    if from then
+        for k, v in pairs(from) do
+            result[k] = v
+        end
+    end
+    return result
+end
+
+-- Merge label and bar styles into left/right styles for the bar
+---@param style_label Label style
+---@param style_bar Usage bar style
+local function build_styles(style_label, style_bar)
+    local style_right = ui.Style()
+            :fg(style_label.fg or style_bar.fg)
+            :bg(style_bar.bg) -- Label bg is ignored
+    if style_label.bold then style_right = style_right:bold() end
+    if style_label.italic then style_right = style_right:italic() end
+    
+    -- Left style is the same as right, but with fg/bg reversed
+    --  (this is overridden by the label colour if set)
+    local style_left = ui.Style()
+            :patch(style_right)
+            :fg(style_label.fg or style_bar.bg)
+            :bg(style_bar.fg) -- Label bg is ignored
+
+    return style_left, style_right
+end
 
 -- Set persistent options
 local set_state_initial = ya.sync(function(st, bar)
@@ -13,6 +56,8 @@ end)
 
 ---Set new plugin state and redraw
 local set_state = ya.sync(function(st, source, usage)
+    -- Todo: move like everything out of here, this function shouldn't do work
+
     -- Skip if nothing has changed
     if source == st.source and usage == st.usage then
         return
@@ -57,22 +102,27 @@ end)
 ---@param opts Options
 local function setup(st, opts)
     -- Set default options first
+    -- Todo: move to the options function
     local position = OPTION_POSITION
     local bar = OPTION_BAR
+    -- Inherit from flavor if possible
+    local style_label = merge(OPTION_STYLE_LABEL, th.status.progress_label)
+    local style_normal = merge(OPTION_STYLE_NORMAL, th.status.progress_normal)
+    local style_warning = merge(OPTION_STYLE_WARNING, th.status.progress_warning)
 
     -- Set user options
     -- Todo: move this to its own function (edit opts in-place to replace nil with defaults)
     if opts then
-        if opts.position then
-            position.parent = opts.position.parent or position.parent
-            position.order = opts.position.order or position.order
-
-            if opts.position.align == "LEFT" or opts.position.align == "RIGHT" then
-                position.align = opts.position.align
-            end
-        end
+        position = merge(position, opts.position)
 
         if opts.bar ~= nil then bar = opts.bar end
+
+        style_label = merge(style_label, opts.style_label)
+        style_normal = merge(style_normal, opts.style_normal)
+        style_warning = merge(style_normal, opts.style_normal)
+
+        -- Allow unsetting label fg with ""
+        if style_label.fg == "" then style_label.fg = nil end
     end
 
     -- Set persistent options
@@ -99,12 +149,7 @@ local function setup(st, opts)
     --  so the usage doesn't update properly
     --  (also file writing/copying doesn't have an event anyway so it would still get out of date)
 
-    local style_bar = ui.Style()
-            :fg(th.status.progress_label.fg)
-            :bg(th.status.progress_normal.fg)
-    local style_normal = ui.Style()
-            :fg(th.status.progress_label.fg)
-            :bg(th.status.progress_normal.bg)
+    local style_left, style_right = build_styles(style_label, style_normal)
 
     position.parent:children_add(function(self)
         if st.usage == nil then
@@ -113,12 +158,12 @@ local function setup(st, opts)
         elseif st.bar and st.source then
             -- Only show bar if source isn't empty (otherwise it's too short)
             return ui.Line {
-                ui.Span(st.text_left or ""):style(style_bar),
-                ui.Span(st.text_right or ""):style(style_normal)
+                ui.Span(st.text_left or ""):style(style_left),
+                ui.Span(st.text_right or ""):style(style_right)
             }
         else
             return ui.Line {
-                ui.Span(st.text or ""):style(style_normal)
+                ui.Span(st.text or ""):style(style_right)
             }
         end
     end, position.order, position.parent[position.align])

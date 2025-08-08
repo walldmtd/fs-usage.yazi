@@ -23,7 +23,7 @@ To use the default setup, add this somewhere in `~/.config/yazi/init.lua`:
 require("fs-usage"):setup()
 ```
 
-To customize it, add this instead and adjust the options as needed:
+To customize it, add this instead and adjust/remove the options as needed:
 
 ```lua
 require("fs-usage"):setup({
@@ -46,6 +46,47 @@ require("fs-usage"):setup({
     -- Option to enable or disable the usage bar
     -- Default: true
     bar = true
+
+    -- Label text style
+    -- Unset options use the progress bar style from the Yazi flavor if available,
+    -- otherwise falls back to the default style
+    --  fg
+    --      Text colour
+    --      Can be a terminal colour string (e.g. "white"),
+    --          or a hex colour (e.g. "#ffffff"),
+    --          or it can be "" to use the reverse of the bar colour
+    --      Default: (unset, inherits from Yazi)
+    --  bold
+    --      One of: true | false
+    --      Default: (unset, inherits from Yazi)
+    --  italic
+    --      One of: true | false
+    --      Default: (unset, inherits from Yazi)
+    -- Example: style_label = { fg = "white", bold = true, italic = false },
+    style_label = {},
+
+    -- Usage bar style
+    -- Unset options use the progress bar style from the Yazi flavor if available,
+    -- otherwise falls back to the default style
+    --  fg
+    --      Bar color
+    --      Can be a terminal colour string (e.g. "blue"),
+    --          or a hex colour (e.g. "#0000ff")
+    --      Default (unset, inherits from Yazi)
+    --  bg
+    --      Bar background color
+    --      Can be a terminal colour string (e.g. "black"),
+    --          or a hex colour (e.g. "#000000")
+    --      Default (unset, inherits from Yazi)
+    -- Example: style_normal = { fg = "blue", bg = "black" },
+    style_normal = {},
+
+    -- Usage bar style when the used space is above the warning threshold
+    -- Unset options use the progress bar error style from the Yazi flavor if available,
+    -- otherwise falls back to the default style
+    -- Options are the same as style_normal
+    -- Example: style_warning = { fg = "red", bg = "black" },
+    style_warning = {},
 })
 ```
 
@@ -55,7 +96,7 @@ require("fs-usage"):setup({
 ## Todo
 
 - [x] Usage bar + option to disable
-- [ ] Colour + option to disable
+- [x] Style options
 - [ ] Options for colour thresholds
 - [ ] Option to remove partition name or percentage
 - [x] Option to change module location (header/footer), and set position in order
