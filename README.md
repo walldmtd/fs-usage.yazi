@@ -90,9 +90,6 @@ require("fs-usage"):setup({
 })
 ```
 
-> [!NOTE]
-> The text only updates when changing directories or tabs in Yazi. When files are moved/deleted/modified, the new partition usage won't be shown until you change directories or switch tabs.
-
 ## Todo
 
 - [x] Usage bar + option to disable

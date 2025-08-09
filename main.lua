@@ -133,12 +133,9 @@ local function setup(st, opts)
     ps.sub("cd", callback)
     ps.sub("tab", callback)
     ps.sub("delete", callback)
-    ps.sub("move", callback)
-    -- Ideally this would subscribe to stuff like file moving/deleting,
-    --  but the callback is triggered before the operation completes
-    --  so the usage doesn't update properly
-    --  (also file writing/copying doesn't have an event anyway so it would still get out of date)
-    -- Todo: Confirm this
+    -- These are the only relevant events that actually work
+    -- Note: df might not immediately reflect usage changes
+    --  when deleting files
 end
 
 
