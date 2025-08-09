@@ -30,62 +30,39 @@ require("fs-usage"):setup({
     -- All values are optional
 
     -- Position of the component
-    --  parent
-    --      Parent component
-    --      One of: "Header" | "Status"
-    --      Default: "Header"
-    --  align
-    --      Anchor point within parent object
-    --      One of: "LEFT" | "RIGHT"
-    --      Default: "RIGHT"
-    --  order
-    --      Component order relative to others in the same parent
-    --      Default: 2000
+    --   parent: Parent component ("Header" or "Status")
+    --   align: Anchor point within parent object ("LEFT" or "RIGHT")
+    --   order: Order relative to others in the same parent
+    -- Default: { parent = "Header", align = "RIGHT", order = 2000 }
     position = { parent = "Header", align = "RIGHT", order = 2000 },
 
     -- Option to enable or disable the usage bar
     -- Default: true
     bar = true
 
+    -- For style options, any unset options use the progress bar style
+    --   from the Yazi flavor if available, otherwise it falls back to
+    --   the default Yazi style.
+
     -- Label text style
-    -- Unset options use the progress bar style from the Yazi flavor if available,
-    -- otherwise falls back to the default style
-    --  fg
-    --      Text colour
-    --      Can be a terminal colour string (e.g. "white"),
-    --          or a hex colour (e.g. "#ffffff"),
-    --          or it can be "" to use the reverse of the bar colour
-    --      Default: (unset, inherits from Yazi)
-    --  bold
-    --      One of: true | false
-    --      Default: (unset, inherits from Yazi)
-    --  italic
-    --      One of: true | false
-    --      Default: (unset, inherits from Yazi)
-    -- Example: style_label = { fg = "white", bold = true, italic = false },
+    --   fg: Text colour (String like "white", or hex like "#ffffff")
+    --      (Can also be "" to use the reverse of the bar colour)
+    --   bold: Make the label bold (bool)
+    --   italic: Make the label italic (bool)
+    -- Example: style_label = { fg = "", bold = true, italic = false },
+    -- Default: {}
     style_label = {},
 
     -- Usage bar style
-    -- Unset options use the progress bar style from the Yazi flavor if available,
-    -- otherwise falls back to the default style
-    --  fg
-    --      Bar color
-    --      Can be a terminal colour string (e.g. "blue"),
-    --          or a hex colour (e.g. "#0000ff")
-    --      Default (unset, inherits from Yazi)
-    --  bg
-    --      Bar background color
-    --      Can be a terminal colour string (e.g. "black"),
-    --          or a hex colour (e.g. "#000000")
-    --      Default (unset, inherits from Yazi)
+    --   fg: Bar colour (String like "blue", or hex like "#0000ff")
+    --   bg: Bar background colour (Same format as fg)
     -- Example: style_normal = { fg = "blue", bg = "black" },
+    -- Default: {}
     style_normal = {},
 
     -- Usage bar style when the used space is above the warning threshold
-    -- Unset options use the progress bar error style from the Yazi flavor if available,
-    -- otherwise falls back to the default style
     -- Options are the same as style_normal
-    -- Example: style_warning = { fg = "red", bg = "black" },
+    -- Default: {}
     style_warning = {},
 })
 ```
