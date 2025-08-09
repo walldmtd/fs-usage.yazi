@@ -61,52 +61,31 @@ local function build_styles(style_label, style_bar)
     return style_left, style_right
 end
 
--- Set persistent options
-local set_state_initial = ya.sync(function(st, bar)
-    st.bar = bar
-end)
-
 ---Set new plugin state and redraw
-local set_state = ya.sync(function(st, source, usage)
-    -- Todo: move like everything out of here, this function shouldn't do work
-
-    -- Skip if nothing has changed
-    if source == st.source and usage == st.usage then
-        return
-    end
-
+local set_state = ya.sync(function(st, source, usage, text_left, text_right)
+    -- Old source/usage, for checking if a redraw is needed
     st.source = source
     st.usage = usage
 
-    -- Todo: move to its own function
-    if st.source and st.usage ~= nil then
-        st.text = string.format(" %s: %d%% ", st.source, st.usage)
-    elseif st.source then
-        st.text = string.format(" %s ", st.source)
-    elseif st.usage ~= nil then
-        st.text = string.format(" %d%% ", st.usage)
-    else
-        st.text = ""
-    end
-
-    -- Don't bother calculating left/right text if bar is disabled
-    -- Also don't bother if source or usage are empty/nil (bar won't be shown)
-    if st.bar and st.source and st.usage ~= nil then
-        -- Todo: maybe make this stuff its own function?
-
-        -- Using ceil so the bar is only empty at 0%
-        -- Using len - 1 so the bar isn't full until 100%
-        local text_len = string.len(st.text)
-        local bar_len = st.usage < 100 and math.ceil((text_len - 1) / 100 * st.usage)
-                or text_len
-
-        st.text_left = string.sub(st.text, 1, bar_len)
-        st.text_right = string.sub(st.text, bar_len + 1, text_len)
-    end
+    -- Current text being displayed
+    st.text_left = text_left
+    st.text_right = text_right
 
     -- Todo: Remove when ya.render is deprecated
     local render = ui.render or ya.render
     render()
+end)
+
+---Get plugin state needed by entry
+local get_state = ya.sync(function(st)
+    return {
+        -- Persistent options
+        bar = st.bar,
+
+        -- Old source/usage, for checking if a redraw is needed
+        source = st.source,
+        usage = st.usage
+    }
 end)
 
 -- Called from init.lua 
@@ -129,48 +108,37 @@ local function setup(st, opts)
     end
 
     -- Set persistent options
-    set_state_initial(opts.bar)
+    st.bar = opts.bar
 
-    ---Callback on cwd change to pass the new path to the plugin entry
+    -- Build styles from options
+    local style_left, style_right = build_styles(opts.style_label, opts.style_normal)
+
+    -- Add the component to the parent
+    opts.position.parent:children_add(function(self)
+        return ui.Line {
+            ui.Span(st.text_left or ""):style(style_left),
+            ui.Span(st.text_right or ""):style(style_right)
+        }
+    end, opts.position.order, opts.position.parent[opts.position.align])
+
+    ---Pass cwd to the plugin for df
     local function callback()
-        local cwd = cx.active.current.cwd
-        if st.cwd ~= cwd then
-            st.cwd = cwd
-
-            ya.emit("plugin", {
-                st._id,
-                ya.quote(tostring(cwd), true)
-            })
-        end
+        ya.emit("plugin", {
+            st._id,
+            ya.quote(tostring(cx.active.current.cwd), true)
+        })
     end
 
     -- Subscribe to events
     ps.sub("cd", callback)
     ps.sub("tab", callback)
+    ps.sub("delete", callback)
+    ps.sub("move", callback)
     -- Ideally this would subscribe to stuff like file moving/deleting,
     --  but the callback is triggered before the operation completes
     --  so the usage doesn't update properly
     --  (also file writing/copying doesn't have an event anyway so it would still get out of date)
     -- Todo: Confirm this
-
-    local style_left, style_right = build_styles(opts.style_label, opts.style_normal)
-
-    opts.position.parent:children_add(function(self)
-        if st.usage == nil then
-            -- No point showing anything if usage == nil
-            return ui.Line("")
-        elseif st.bar and st.source then
-            -- Only show bar if source isn't empty (otherwise it's too short)
-            return ui.Line {
-                ui.Span(st.text_left or ""):style(style_left),
-                ui.Span(st.text_right or ""):style(style_right)
-            }
-        else
-            return ui.Line {
-                ui.Span(st.text or ""):style(style_right)
-            }
-        end
-    end, opts.position.order, opts.position.parent[opts.position.align])
 end
 
 
@@ -182,15 +150,44 @@ local function entry(_, job)
     -- Don't set cwd directly for Command() here, it hangs for dirs without read perms
     -- cwd is fine as an argument to df though
     local output = Command("df")
-            :arg({ "--output=source,pcent", tostring(cwd) })
-            :output()
-    
-    if output.status.success then
-        local source, usage = output.stdout:match(".*%s(%S+)%s+(%d+)%%")
-        set_state(source, tonumber(usage))
-    else
-        set_state("", nil)
+        :arg({ "--output=source,pcent", tostring(cwd) })
+        :output()
+
+    -- If df fails, hide the module
+    if not output.status.success then
+        set_state("", nil, "", "")
+        return
     end
+
+    -- Process df output
+    local source, usage = output.stdout:match(".*%s(%S+)%s+(%d+)%%")
+    usage = tonumber(usage)
+
+    -- Get the plugin state here since now we know it's needed
+    local st = get_state()
+
+    -- If nothing has changed, don't bother updating
+    if source == st.source and usage == st.usage then
+        return
+    end
+
+    -- Start with text_right by default (used when no bar)
+    local text_left = ""
+    local text_right = string.format(" %s: %d%% ", source, usage)
+
+    -- Only calculate bar length if the bar will be shown
+    if st.bar then
+        -- Using ceil so the bar is only empty at 0%
+        -- Using len - 1 so the bar isn't full until 100%
+        local text_len = string.len(text_right)
+        local bar_len = usage < 100 and math.ceil((text_len - 1) / 100 * usage)
+                or text_len
+
+        text_left = string.sub(text_right, 1, bar_len)
+        text_right = string.sub(text_right, bar_len + 1, text_len)
+    end
+
+    set_state(source, usage, text_left, text_right)
 end
 
 return { setup = setup, entry = entry }
