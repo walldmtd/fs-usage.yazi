@@ -50,7 +50,7 @@ require("fs-usage"):setup({
 
     -- Option to enable or disable the usage bar
     -- Default: true
-    bar = true
+    bar = true,
 
     -- Percent usage to use the warning style (-1 to disable)
     -- Default: 90
