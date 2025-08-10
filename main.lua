@@ -5,6 +5,7 @@ local DEFAULT_OPTIONS = {
     -- 2000 puts it to the right of the indicator, and leaves some room between
     position = { parent = "Header", align = "RIGHT", order = 2000 },
     bar = true,
+    warning_threshold = 90,
     style_label = th.status.progress_label,
     style_normal = th.status.progress_normal,
     style_warning = th.status.progress_error
@@ -63,11 +64,8 @@ end
 
 ---Set new plugin state and redraw
 local set_state = ya.sync(function(st, source, usage, text_left, text_right)
-    -- Old source/usage, for checking if a redraw is needed
     st.source = source
     st.usage = usage
-
-    -- Current text being displayed
     st.text_left = text_left
     st.text_right = text_right
 
@@ -82,7 +80,7 @@ local get_state = ya.sync(function(st)
         -- Persistent options
         bar = st.bar,
 
-        -- Old source/usage, for checking if a redraw is needed
+        -- Variables
         source = st.source,
         usage = st.usage
     }
@@ -94,8 +92,9 @@ end)
 local function setup(st, opts)
     opts = merge(DEFAULT_OPTIONS, opts)
 
-    -- Allow unsetting label fg with ""
+    -- Allow unsetting some options
     if opts.style_label.fg == "" then opts.style_label.fg = nil end
+    if opts.warning_threshold < 0 then opts.warning_threshold = nil end
 
     -- Translate opts.position.parent option into a component reference
     if opts.position.parent == "Header" then
@@ -109,16 +108,30 @@ local function setup(st, opts)
 
     -- Set persistent options
     st.bar = opts.bar
+    st.warning_threshold = opts.warning_threshold
 
     -- Build styles from options
-    local style_left, style_right = build_styles(opts.style_label, opts.style_normal)
+    local style_normal_left, style_normal_right = build_styles(opts.style_label, opts.style_normal)
+    local style_warning_left, style_warning_right = build_styles(opts.style_label, opts.style_warning)
 
     -- Add the component to the parent
     opts.position.parent:children_add(function(self)
-        return ui.Line {
-            ui.Span(st.text_left or ""):style(style_left),
-            ui.Span(st.text_right or ""):style(style_right)
-        }
+        -- No point showing anything if usage is nil
+        if not st.usage then
+            return
+        end
+
+        if not st.warning_threshold or st.usage < st.warning_threshold then
+            return ui.Line {
+                ui.Span(st.text_left or ""):style(style_normal_left),
+                ui.Span(st.text_right or ""):style(style_normal_right)
+            }
+        else
+            return ui.Line {
+                ui.Span(st.text_left or ""):style(style_warning_left),
+                ui.Span(st.text_right or ""):style(style_warning_right)
+            }
+        end
     end, opts.position.order, opts.position.parent[opts.position.align])
 
     ---Pass cwd to the plugin for df

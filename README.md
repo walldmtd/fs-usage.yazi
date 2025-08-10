@@ -40,6 +40,10 @@ require("fs-usage"):setup({
     -- Default: true
     bar = true
 
+    -- Percent usage to use the warning style (-1 to disable)
+    -- Default: 90
+    warning_threshold = 90,
+
     -- For style options, any unset options use the progress bar style
     --   from the Yazi flavor if available, otherwise it falls back to
     --   the default Yazi style.
@@ -63,7 +67,7 @@ require("fs-usage"):setup({
     -- Usage bar style when the used space is above the warning threshold
     -- Options are the same as style_normal
     -- Default: {}
-    style_warning = {},
+    style_warning = {}
 })
 ```
 
@@ -71,6 +75,6 @@ require("fs-usage"):setup({
 
 - [x] Usage bar + option to disable
 - [x] Style options
-- [ ] Options for colour thresholds
+- [x] Options for colour thresholds
 - [ ] Option to remove partition name or percentage
 - [x] Option to change module location (header/footer), and set position in order
