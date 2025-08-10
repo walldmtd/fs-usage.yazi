@@ -1,6 +1,6 @@
 # fs-usage.yazi
 
-A [Yazi](https://github.com/sxyazi/yazi) plugin to show the used space in the current partition using `df`.
+A [Yazi](https://github.com/sxyazi/yazi) plugin to show the current partition's used space in the header or status.
 
 ![preview_normal.png](previews/preview_normal.png)
 
@@ -9,7 +9,7 @@ A [Yazi](https://github.com/sxyazi/yazi) plugin to show the used space in the cu
 ## Installation
 
 > [!IMPORTANT]
-> - This plugin is only supported on Linux
+> - This plugin is only supported on Linux (uses `df`)
 >   - It *might* work with WSL, but that is untested
 > - Requires Yazi v25.5.31 or later
 
