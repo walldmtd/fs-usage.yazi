@@ -2,6 +2,10 @@
 
 A [Yazi](https://github.com/sxyazi/yazi) plugin to show the used space in the current partition using `df`.
 
+![preview_normal.png](previews/preview_normal.png)
+
+![preview_warning.png](previews/preview_warning.png)
+
 ## Installation
 
 > [!IMPORTANT]
