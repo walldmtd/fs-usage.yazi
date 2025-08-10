@@ -36,6 +36,14 @@ require("fs-usage"):setup({
     -- Default: { parent = "Header", align = "RIGHT", order = 2000 }
     position = { parent = "Header", align = "RIGHT", order = 2000 },
 
+    -- Text format
+    -- One of:
+    --   "both": Partition name and percent used
+    --   "name": Only partition name
+    --   "usage": Only percent used
+    -- Default: "both"
+    format = "both",
+
     -- Option to enable or disable the usage bar
     -- Default: true
     bar = true
@@ -70,11 +78,3 @@ require("fs-usage"):setup({
     style_warning = {}
 })
 ```
-
-## Todo
-
-- [x] Usage bar + option to disable
-- [x] Style options
-- [x] Options for colour thresholds
-- [ ] Option to remove partition name or percentage
-- [x] Option to change module location (header/footer), and set position in order

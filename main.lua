@@ -4,6 +4,7 @@ local DEFAULT_OPTIONS = {
     -- Can't reference Header.RIGHT etc. here (it hangs) so parent and align are strings
     -- 2000 puts it to the right of the indicator, and leaves some room between
     position = { parent = "Header", align = "RIGHT", order = 2000 },
+    format = "both",
     bar = true,
     warning_threshold = 90,
     style_label = th.status.progress_label,
@@ -11,7 +12,7 @@ local DEFAULT_OPTIONS = {
     style_warning = th.status.progress_error
 }
 
--- Deep copy and merge two tables, overwriting values from one table into another
+---Deep copy and merge two tables, overwriting values from one table into another
 ---@param from Table to take values from
 ---@param to Table to merge into
 local function merge(into, from)
@@ -42,7 +43,7 @@ local function merge(into, from)
     return result
 end
 
--- Merge label and bar styles into left/right styles for the bar
+---Merge label and bar styles into left/right styles for the bar
 ---@param style_label Label style
 ---@param style_bar Usage bar style
 local function build_styles(style_label, style_bar)
@@ -62,6 +63,22 @@ local function build_styles(style_label, style_bar)
     return style_left, style_right
 end
 
+---Format text based on options
+---@param source Source
+---@param usage Usage
+---@param format Format
+local function format_text(source, usage, format)
+    local text = ""
+    if format == "both" then
+        text = string.format(" %s: %d%% ", source, usage)
+    elseif format == "name" then
+        text = string.format(" %s ", source)
+    elseif format == "usage" then
+        text = string.format(" %d%% ", usage)
+    end
+    return text
+end
+
 ---Set new plugin state and redraw
 local set_state = ya.sync(function(st, source, usage, text_left, text_right)
     st.source = source
@@ -78,6 +95,7 @@ end)
 local get_state = ya.sync(function(st)
     return {
         -- Persistent options
+        format = st.format,
         bar = st.bar,
 
         -- Variables
@@ -107,6 +125,7 @@ local function setup(st, opts)
     end
 
     -- Set persistent options
+    st.format = opts.format
     st.bar = opts.bar
     st.warning_threshold = opts.warning_threshold
 
@@ -183,7 +202,7 @@ local function entry(_, job)
 
     -- Start with text_right by default (used when no bar)
     local text_left = ""
-    local text_right = string.format(" %s: %d%% ", source, usage)
+    local text_right = format_text(source, usage, st.format)
 
     -- Only calculate bar length if the bar will be shown
     if st.bar then
