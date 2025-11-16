@@ -52,7 +52,7 @@ local function build_styles(style_label, style_bar)
             :bg(style_bar.bg) -- Label bg is ignored
     if style_label.bold then style_right = style_right:bold() end
     if style_label.italic then style_right = style_right:italic() end
-    
+
     -- Left style is the same as right, but with fg/bg reversed
     --  (this is overridden by the label colour if set)
     local style_left = ui.Style()
@@ -104,7 +104,7 @@ local get_state = ya.sync(function(st)
     }
 end)
 
--- Called from init.lua 
+-- Called from init.lua
 ---@param st State
 ---@param opts Options
 local function setup(st, opts)
@@ -189,8 +189,17 @@ local function entry(_, job)
     end
 
     -- Process df output
-    local source, usage = output.stdout:match(".*%s(%S+)%s+(%d+)%%")
-    usage = tonumber(usage)
+    local source, usage = output.stdout:match(".*%s(%S+)%s+(%S+)")
+
+	-- If df read the filesystem but couldn't get a percentage, hide the module
+	if usage == "-" then
+        set_state("", nil, "", "")
+        return
+	end
+
+	-- Assume usage is a valid percentage
+	-- Remove the percent and convert to number
+    usage = tonumber(string.sub(usage, 1, #usage - 1))
 
     -- Get the plugin state here since now we know it's needed
     local st = get_state()
