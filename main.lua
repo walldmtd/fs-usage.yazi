@@ -1,4 +1,4 @@
---- @since 25.5.31
+--- @since 25.12.29
 
 local DEFAULT_OPTIONS = {
     -- Can't reference Header.RIGHT etc. here (it hangs) so parent and align are strings
@@ -7,9 +7,20 @@ local DEFAULT_OPTIONS = {
     format = "both",
     bar = true,
     warning_threshold = 90,
-    style_label = th.status.progress_label,
-    style_normal = th.status.progress_normal,
-    style_warning = th.status.progress_error
+    -- As of Yazi 25.12.29, Style properties are functions, which might be a bug?
+    --   Passing the Sytle object itself works for now.
+    style_label = {
+        fg = th.status.progress_label.fg(th.status.progress_label),
+    },
+    style_normal = {
+        fg = th.status.progress_normal.fg(th.status.progress_normal),
+        bg = th.status.progress_normal.bg(th.status.progress_normal)
+    },
+    style_warning = {
+        fg = th.status.progress_error.fg(th.status.progress_error),
+        bg = th.status.progress_error.bg(th.status.progress_error)
+    },
+
 }
 
 ---Deep copy and merge two tables, overwriting values from one table into another
