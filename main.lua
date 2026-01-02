@@ -18,6 +18,7 @@ local DEFAULT_OPTIONS = {
         fg = th.status.progress_error:fg(),
         bg = th.status.progress_error:bg()
     },
+    padding = { open = "", close = "" }
 
 }
 
@@ -79,23 +80,22 @@ end
 local function format_text(source, usage, format)
     local text = ""
     if format == "both" then
-        text = string.format(" %s: %d%% ", source, usage)
+        text = string.format("%s: %d%%", source, usage)
     elseif format == "name" then
-        text = string.format(" %s ", source)
+        text = string.format("%s", source)
     elseif format == "usage" then
-        text = string.format(" %d%% ", usage)
+        text = string.format("%d%%", usage)
     end
     return text
 end
 
 ---Set new plugin state and redraw
-local set_state = ya.sync(function(st, source, usage, text_left, text_right)
+local set_state = ya.sync(function(st, source, usage, text, bar_len)
     st.source = source
     st.usage = usage
-    st.text_left = text_left
-    st.text_right = text_right
+    st.text = text
+    st.bar_len = bar_len
 
-    -- Todo: Remove when ya.render is deprecated
     local render = ui.render or ya.render
     render()
 end)
@@ -106,6 +106,7 @@ local get_state = ya.sync(function(st)
         -- Persistent options
         format = st.format,
         bar = st.bar,
+        padding = st.padding,
 
         -- Variables
         source = st.source,
@@ -134,13 +135,30 @@ local function setup(st, opts)
     end
 
     -- Set persistent options
+    local style_normal_left, style_normal_right = build_styles(opts.style_label, opts.style_normal)
+    local style_warning_left, style_warning_right = build_styles(opts.style_label, opts.style_warning)
+    st.style = {
+        normal = {
+            left = style_normal_left,
+            right = style_normal_right,
+            padding = {
+                left = ui.Style():fg(style_normal_left:bg()),
+                right = ui.Style():fg(style_normal_right:bg())
+            }
+        },
+        warning = {
+            left = style_warning_left,
+            right = style_warning_right,
+            padding = {
+                left = ui.Style():fg(style_warning_left:bg()),
+                right = ui.Style():fg(style_warning_right:bg())
+            }
+        }
+    }
     st.format = opts.format
     st.bar = opts.bar
     st.warning_threshold = opts.warning_threshold
-
-    -- Build styles from options
-    local style_normal_left, style_normal_right = build_styles(opts.style_label, opts.style_normal)
-    local style_warning_left, style_warning_right = build_styles(opts.style_label, opts.style_warning)
+    st.padding = opts.padding
 
     -- Add the component to the parent
     opts.position.parent:children_add(function(self)
@@ -149,17 +167,41 @@ local function setup(st, opts)
             return
         end
 
-        if not st.warning_threshold or st.usage < st.warning_threshold then
-            return ui.Line {
-                ui.Span(st.text_left or ""):style(style_normal_left),
-                ui.Span(st.text_right or ""):style(style_normal_right)
-            }
-        else
-            return ui.Line {
-                ui.Span(st.text_left or ""):style(style_warning_left),
-                ui.Span(st.text_right or ""):style(style_warning_right)
-            }
+        local style = (st.warning_threshold and st.usage >= st.warning_threshold)
+            and st.style.warning
+            or st.style.normal
+
+        -- Apply styles to components based on the bar length, and ad them to the bar
+        local output = {}
+        local bar_len = st.bar_len
+        local components = {
+            { text = st.padding.open, style = style.padding },
+            { text = st.text, style = style },
+            { text = st.padding.close, style = style.padding }
+        }
+        for _,component in ipairs(components) do
+            -- bar_len_bytes should point to the last byte that should be coloured by the usage bar
+            local bar_len_bytes
+            if bar_len <= 0 then
+                -- 1-indexed, so effectively no bar showing
+                bar_len_bytes = 0
+            elseif bar_len >= #component.text then
+                bar_len_bytes = #component.text
+            else
+                bar_len_bytes = utf8.offset(component.text, bar_len + 1) - 1
+            end
+
+            if bar_len_bytes > 0 then
+                table.insert(output, ui.Span(string.sub(component.text, 1, bar_len_bytes)):style(component.style.left))
+            end
+            if bar_len_bytes < #component.text then
+                table.insert(output, ui.Span(string.sub(component.text, bar_len_bytes + 1)):style(component.style.right))
+            end
+
+            bar_len = bar_len - utf8.len(component.text)
         end
+
+        return ui.Line(output)
     end, opts.position.order, opts.position.parent[opts.position.align])
 
     ---Pass cwd to the plugin for df
@@ -193,7 +235,7 @@ local function entry(_, job)
 
     -- If df fails, hide the module
     if not output.status.success then
-        set_state("", nil, "", "")
+        set_state(nil, nil, nil, nil)
         return
     end
 
@@ -202,7 +244,7 @@ local function entry(_, job)
 
 	-- If df read the filesystem but couldn't get a percentage, hide the module
 	if usage == "-" then
-        set_state("", nil, "", "")
+        set_state(nil, nil, nil, nil)
         return
 	end
 
@@ -218,23 +260,20 @@ local function entry(_, job)
         return
     end
 
-    -- Start with text_right by default (used when no bar)
-    local text_left = ""
-    local text_right = format_text(source, usage, st.format)
+    local text = format_text(source, usage, st.format)
+    local bar_len = 0 -- Start with no bar by default
 
     -- Only calculate bar length if the bar will be shown
     if st.bar then
+        local total_len = utf8.len(st.padding.open .. text .. st.padding.close)
+
         -- Using ceil so the bar is only empty at 0%
         -- Using len - 1 so the bar isn't full until 100%
-        local text_len = string.len(text_right)
-        local bar_len = usage < 100 and math.ceil((text_len - 1) / 100 * usage)
-                or text_len
-
-        text_left = string.sub(text_right, 1, bar_len)
-        text_right = string.sub(text_right, bar_len + 1, text_len)
+        bar_len = usage < 100 and math.ceil((total_len - 1) / 100 * usage)
+                or total_len
     end
 
-    set_state(source, usage, text_left, text_right)
+    set_state(source, usage, text, bar_len)
 end
 
 return { setup = setup, entry = entry }
