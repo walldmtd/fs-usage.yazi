@@ -185,7 +185,7 @@ local function setup(st, opts)
             if bar_len <= 0 then
                 -- 1-indexed, so effectively no bar showing
                 bar_len_bytes = 0
-            elseif bar_len >= #component.text then
+            elseif bar_len >= utf8.len(component.text) then
                 bar_len_bytes = #component.text
             else
                 bar_len_bytes = utf8.offset(component.text, bar_len + 1) - 1
