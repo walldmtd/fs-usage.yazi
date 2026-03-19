@@ -71,6 +71,21 @@ local function build_styles(style_label, style_bar)
 	return style_left, style_right
 end
 
+---Parse source and usage from df output
+---@param stdout string df output
+local function process_df_output(stdout)
+	local source, usage = stdout:match(".*%s(%S+)%s+(%S+)")
+
+	-- Follow symlinks in source
+	source = Command("readlink"):arg({ "--silent", "--canonicalize", "--no-newline", source }):output().stdout
+
+	-- Assume usage is a valid percentage
+	-- Remove the percent and parse
+	usage = tonumber(string.sub(usage, 1, #usage - 1))
+
+	return source, usage
+end
+
 ---Format text based on options
 ---@param source Source
 ---@param usage Usage
@@ -240,20 +255,16 @@ local function entry(_, job)
 		return
 	end
 
-	-- Process df output
-	local source, usage = output.stdout:match(".*%s(%S+)%s+(%S+)")
+	local source, usage = process_df_output(output.stdout)
 
 	-- If df read the filesystem but couldn't get a percentage, hide the module
-	if usage == "-" then
+	-- if usage == nil then
+	if type(usage) ~= "number" then
 		set_state(nil, nil, nil, nil)
 		return
 	end
 
-	-- Assume usage is a valid percentage
-	-- Remove the percent and convert to number
-	usage = tonumber(string.sub(usage, 1, #usage - 1))
-
-	-- Get the plugin state here since now we know it's needed
+	-- Get the plugin state (async) early since we know it will be used
 	local st = get_state()
 
 	-- If nothing has changed, don't bother updating
